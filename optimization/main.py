@@ -68,7 +68,7 @@ def train_0(storage, nb_epochs, bt_size, pretrained_model, common_space_dim, n_l
 	th.save(network, path.join(f'{dump_path}' f'damsm_{epoch_counter:03d}.th'))
 
 
-def train_1(storage, nb_epochs, bt_size, damsm_path, t_dim, c_dim, z_dim, n_layers, common_space_dim, nb_gen_features, nb_dis_features, snapshot_interval, dump_path):
+def train_1(storage, nb_epochs, bt_size, damsm_path, t_dim, c_dim, z_dim, n_layers, common_space_dim, nb_gen_features, nb_dis_features, snapshot_interval, dump_path, images_store):
 	device = th.device( 'cuda:0' if th.cuda.is_available() else 'cpu' )
 	
 	source = DATAHOLDER(path_to_storage=storage, for_train=True, max_len=18, neutral='<###>')
@@ -225,7 +225,23 @@ def train_1(storage, nb_epochs, bt_size, damsm_path, t_dim, c_dim, z_dim, n_laye
 			message = (epoch_counter, nb_epochs, index, GTOT.item(), D064.item(), D128.item(), D256.item())
 			logger.debug('[%03d/%03d]:%05d >> GLoss : %07.3f | D064 : %07.3f | D128 : %07.3f | D256 : %07.3f' % message)
 
+			if index % snapshot_interval == 0:	
+				descriptions = [ source.map_index2caption(seq) for seq in captions]
+				output = snapshot(r_image_256.cpu(), f_image_256.cpu(), descriptions, f'output epoch {epoch_counter:03d}', mean=[0.5], std=[0.5])
+				cv2.imwrite(path.join(images_store, f'###_{epoch_counter:03d}_{index:03d}.jpg'), output)
 
+		if epoch_counter % snapshot_interval == 0:
+			th.save(generators, path.join(f'{dump_path}', f'generators_{epoch_counter:03d}.th'))		
+			th.save(discriminator_0, path.join(f'{dump_path}', f'D064_{epoch_counter:03d}.th'))		
+			th.save(discriminator_1, path.join(f'{dump_path}', f'D128_{epoch_counter:03d}.th'))		
+			th.save(discriminator_2, path.join(f'{dump_path}', f'D256_{epoch_counter:03d}.th'))		
+					
+
+	th.save(generators, path.join(f'{dump_path}', f'generators_{epoch_counter:03d}.th'))		
+	th.save(discriminator_0, path.join(f'{dump_path}', f'D064_{epoch_counter:03d}.th'))		
+	th.save(discriminator_1, path.join(f'{dump_path}', f'D128_{epoch_counter:03d}.th'))		
+	th.save(discriminator_2, path.join(f'{dump_path}', f'D256_{epoch_counter:03d}.th'))		
+		
 
 @click.command()
 @click.option('--storage', help='path to dataset: [CUB]')
@@ -257,11 +273,14 @@ def damsm_training(ctx, storage, nb_epochs, bt_size, pretrained_model, common_sp
 @click.option('--nb_dis_features', help='number extracted features for discriminator', type=int, default=64)
 @click.option('--snapshot_interval', help='interval of saving images', type=int, default=100)
 @click.option('--dump_path', help='path to models store', type=click.Path(False))
+@click.option('--images_store', help='path to generated images store', type=click.Path(False), default='images_dump')
 @click.pass_context
-def attngan_training(ctx, storage, nb_epochs, bt_size, damsm_path, t_dim, c_dim, z_dim, n_layers, common_space_dim, nb_gen_features, nb_dis_features, snapshot_interval, dump_path):
+def attngan_training(ctx, storage, nb_epochs, bt_size, damsm_path, t_dim, c_dim, z_dim, n_layers, common_space_dim, nb_gen_features, nb_dis_features, snapshot_interval, dump_path, images_store):
 	if not path.isdir(dump_path):
 		mkdir(dump_path)
-	train_1(storage, nb_epochs, bt_size, damsm_path, t_dim, c_dim, z_dim, n_layers, common_space_dim, nb_gen_features, nb_dis_features ,snapshot_interval, dump_path)
+	if not path.isdir(images_store):
+		mkdir(images_store)	
+	train_1(storage, nb_epochs, bt_size, damsm_path, t_dim, c_dim, z_dim, n_layers, common_space_dim, nb_gen_features, nb_dis_features ,snapshot_interval, dump_path, images_store)
 
 
 @click.group(chain=False, invoke_without_command=True)
