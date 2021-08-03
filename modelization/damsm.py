@@ -8,7 +8,6 @@ import torchvision as tv
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from torchvision.models import inception_v3 as IV3 
 
-
 class RNN_ENCODER(nn.Module):
 	def __init__(self, h_size, n_layers, p, n_emb, e_dim, p_idx):
 		super(RNN_ENCODER, self).__init__()
@@ -21,16 +20,21 @@ class RNN_ENCODER(nn.Module):
 		
 		self.head.weight.data.uniform_(-0.1, 0.1)
 	
-	def forward(self, T, seq_length, hidden_cell_0):
+	def forward(self, T, seq_length):
 		batch_size, max_length  = T.shape
+		hidden_cell_0 = (
+			th.zeros(2 * self.numb_layers, batch_size, self.hidden_size).to(next(self.parameters()).device),
+			th.zeros(2 * self.numb_layers, batch_size, self.hidden_size).to(next(self.parameters()).device)
+		)
+
 		embedded = self.drop(self.head(T))  # 2D => 3D
 		packed_embedded = pack_padded_sequence(embedded, seq_length, batch_first=True)
 		rnn_packed_response, (hidden_1, _ ) = self.body(packed_embedded, hidden_cell_0)
 		rnn_padded_response, _ = pad_packed_sequence(rnn_packed_response, batch_first=True, total_length=max_length)
 		words_embedding = rnn_padded_response.transpose(1, 2)       #BxHxS
-		global_sentence_embedding = th.cat(tuple(hidden_1), dim=1).transpose(0, 1)  #HxB 
+		global_sentence_embedding = th.cat(tuple(hidden_1), dim=1)  #BxH 
 
-		return words_embedding, global_sentence_embedding 
+		return words_embedding, global_sentence_embedding.transpose(0, 1) 
 
 class CNN_ENCODER(nn.Module):
 	def __init__(self, nef):
@@ -53,9 +57,7 @@ class CNN_ENCODER(nn.Module):
 	def forward(self, X0):
 		X1 = self.head(self.init(X0))
 		X2 = self.body(X1)
-		I0 = th.flatten(self.cnn_(X1), start_dim=2)
-		I1 = self.mlp_(X2.view(X2.size(0), -1)).transpose(0, 1)
-		return I0, I1  
+		return th.flatten(self.cnn_(X1), start_dim=2), self.mlp_(X2.view(X2.size(0), -1)).transpose(0, 1)
 
 class DAMSM(nn.Module):
 
@@ -69,19 +71,19 @@ class DAMSM(nn.Module):
 		W = th.reshape(M, (B, B))
 	"""
 
-	def __init__(self, vocab_size, common_space_dim=256, e_dim=300, n_layers=1):
+	def __init__(self, vocab_size, common_space_dim=256, e_dim=300):
 		super(DAMSM, self).__init__()
-		self.rnn_network = RNN_ENCODER(h_size=common_space_dim // 2, n_layers=n_layers, p=0.1, n_emb=vocab_size, e_dim=e_dim, p_idx=0)
+		self.rnn_network = RNN_ENCODER(h_size=common_space_dim // 2, n_layers=1, p=0.1, n_emb=vocab_size, e_dim=e_dim, p_idx=0)
 		self.cnn_network = CNN_ENCODER(common_space_dim)
 
-	def encode_seq(self, seq, seq_length, hidden_cell_0):
-		return self.rnn_network(seq, seq_length, hidden_cell_0)
+	def encode_seq(self, seq, seq_length):
+		return self.rnn_network(seq, seq_length)
 
 	def encode_img(self, img):
 		return self.cnn_network(img)
 
-	def forward(self, img, seq, seq_length, hidden_cell_0):
-		words_features, sentence_features = self.encode_seq(seq, seq_length, hidden_cell_0)
+	def forward(self, img, seq, seq_length):
+		words_features, sentence_features = self.encode_seq(seq, seq_length)
 		local_image_features, global_image_features = self.encode_img(img)
 		return words_features, sentence_features, local_image_features, global_image_features
 

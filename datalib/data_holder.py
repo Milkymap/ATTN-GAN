@@ -21,9 +21,8 @@ from torchvision import transforms as T
 from nltk.tokenize import RegexpTokenizer
 
 class DATAHOLDER(Dataset):
-	def __init__(self, path_to_storage, for_train=True, max_len=18, neutral='<###>', shapes=[64, 128, 256], nb_items=None, default_index=0):
+	def __init__(self, path_to_storage, max_len=18, neutral='<###>', shapes=[64, 128, 256], nb_items=None, default_index=0):
 		self.root = path_to_storage
-		self.mode = for_train
 		self.max_len = max_len
 		self.neutral = neutral
 		self.nb_items = nb_items
@@ -41,18 +40,18 @@ class DATAHOLDER(Dataset):
 	def prepare(self):
 		path_0 = path.join(self.root, 'images.txt')
 		path_1 = path.join(self.root, 'bounding_boxes.txt')
-		path_2 = path.join(self.root, 'train_test_split.txt')
+		path_2 = path.join(self.root, 'filenames.pickle')
 
 		line_0 = open(path_0, 'r').read().split('\n')
 		line_1 = open(path_1, 'r').read().split('\n')
 		line_2 = open(path_2, 'r').read().split('\n')
+		line_3 = pk.load(open(path_2, 'rb'))
 
 		idmap = dict([ elm.replace('.jpg', '').split(' ')[-1::-1] for elm in line_0 if len(elm) > 0 ])
 		idmap = {key:int(val) - 1 for key,val in idmap.items()}
 		bboxes = [ list(map(float, elm.split(' ')[1:])) for elm in line_1 if len(elm) > 0 ]
-		f_states = [ int(elm.split(' ')[1]) for elm in line_2 if len(elm) > 0]
-
-		filenames = [ f_name for f_name, f_id in idmap.items() if f_states[f_id] == int(self.mode) ]
+	
+		filenames = [ f_name for f_name, f_id in idmap.items() if f_name in line_3 ]
 		if self.nb_items is not None:
 			filenames = filenames[:self.nb_items]
 		return filenames, idmap, bboxes
