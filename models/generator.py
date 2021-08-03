@@ -12,7 +12,7 @@ class CA_BLOCK(nn.Module):
 	def forward(self, T):
 		mu = self.lin0(T)
 		lv = self.lin1(T)
-		ca = mu + th.randn(mu.shape) * th.exp(lv / 2) 
+		ca = mu + th.randn(mu.shape).to(T.device) * th.exp(lv / 2) 
 		return ca, mu, lv 
 
 class AT_BLOCK(nn.Module):

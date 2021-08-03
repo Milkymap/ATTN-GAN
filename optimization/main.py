@@ -11,9 +11,9 @@ from libraries.log import logger
 from datalib.data_holder import DATAHOLDER 
 from datalib.data_loader import DATALOADER 
 
-from modelization.damsm import *
-from modelization.generator import GENERATOR 
-from modelization.discriminator import DISCRIMINATOR 
+from models.damsm import *
+from models.generator import GENERATOR 
+from models.discriminator import DISCRIMINATOR 
 
 from os import path, mkdir 
 
@@ -103,7 +103,7 @@ def train_1(storage, nb_epochs, bt_size, damsm_path, t_dim, c_dim, z_dim, common
 		for index, (r_image_064, r_image_128, r_image_256, captions, lengths) in enumerate(loader.loader):
 			batch_size = r_image_256.size(0)
 			nb_images = nb_images + batch_size 
-			
+
 			#-------------------#
 			#move data to device#
 			#-------------------#
