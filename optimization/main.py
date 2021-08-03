@@ -125,7 +125,7 @@ def train_1(storage, nb_epochs, bt_size, damsm_path, t_dim, c_dim, z_dim, common
 			#-----------------------#
 			#TRAIN GENERATOR NETWORK#
 			#-----------------------#
-			noise = th.randn(batch_size, z_dim)
+			noise = th.randn(batch_size, z_dim).to(device)
 			f_image_064, f_image_128, f_image_256, mu, logvar = generator(noise, sentence, words)
 			
 			F00, F01 = discriminator_0.compute(f_image_064, sentence)
