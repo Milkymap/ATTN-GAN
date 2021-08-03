@@ -1,6 +1,7 @@
 from sys import stdout 
 from loguru import logger 
 
+
 log_format = [
 	'<W><k>{time: YYYY-MM-DD hh:mm:ss}</k></W>',
 	'<c>{file:^15}</c>',
@@ -13,7 +14,8 @@ log_separator = ' | '
 
 logger.remove()
 logger.add(
-	sink=stdout,
+	sink='log.txt',
 	level='TRACE', 
-	format=log_separator.join(log_format)
+	format=log_separator.join(log_format), 
+	rotation='500 MB'
 )
