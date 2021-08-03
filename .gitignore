@@ -29,7 +29,7 @@ MANIFEST
 
 #storage
 dump/
-images_dump/
+images_store/
 
 
 # PyInstaller
